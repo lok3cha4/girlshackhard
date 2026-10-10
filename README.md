@@ -41,6 +41,9 @@ uv sync          # Python 3.12, mujoco 3.14.0, pygame, pyserial
 
 ## Run
 
+<img width="914" height="546" alt="image" src="https://github.com/user-attachments/assets/b331a5fc-f05e-4aea-ac01-7c3a65bdaa4f" />
+
+
 **Live control UI** (pygame window: pitch/yaw sliders, live MuJoCo-predicted
 shape, serial port picker):
 
