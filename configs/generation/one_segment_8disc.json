@@ -1,14 +1,14 @@
 {
-  "description": "Hardware layout: 1 segment, 8 PLA discs at 10 mm pitch (80 mm), 4 tendons at 17 mm (2 SG90 servos: A0 = 0/180 deg pair, A1 = 90/270 deg pair). Used by scripts/bend_ui.py.",
+  "description": "Hardware layout: 1 segment, 8 PLA discs at 20 mm pitch (160 mm), 4 tendons at 17 mm (2 SG90 servos: A0 = 0/180 deg pair, A1 = 90/270 deg pair). Used by scripts/bend_ui.py.",
   "_comment_1_geometry": "=================== BACKBONE GEOMETRY ===================",
   "num_segments": 1,
   "_comment_links": "links_per_segment: how many rigid links approximate each flexible segment. More links = smoother bending but slower simulation (8-15 is typical).",
   "links_per_segment": {
     "1": 24
   },
-  "_comment_lengths": "8 discs x 10 mm pitch (7 mm face-to-face gap + 3 mm disc) = 80 mm; 3 tube links per disc pitch.",
+  "_comment_lengths": "8 discs x 20 mm centre-to-centre pitch (17 mm face-to-face gap + 3 mm disc) = 160 mm; 3 tube links per disc pitch.",
   "segment_lengths": {
-    "1": 0.08
+    "1": 0.16
   },
   "_comment_radius": "radius: VISUAL radius of each link cylinder, in meters (cosmetic only - structural stiffness comes from material_properties.outer_radius below).",
   "radius": 0.00425,

@@ -12,7 +12,7 @@ board), the serial bridge to the servos, and the firmware.
 |---|---|
 | Segments | 1 |
 | Discs | 8 × PLA, Ø40 mm, 3 mm thick, Ø8.5 mm bore, 15% infill (≈2.9 g each) |
-| Disc pitch | 10 mm (80 mm segment) — *check against the prototype, see Caveats* |
+| Disc pitch | 20 mm centre-to-centre (17 mm face-to-face gap) → 160 mm segment |
 | Backbone | silicone tube, Ø8.5 mm OD / Ø6.5 mm ID |
 | Tendons | 4, through Ø1.75 mm holes at 17 mm radius, 0/90/180/270° |
 | Actuation | 2 × SG90 servos, one per agonist–antagonist pair: A0 = pitch (0/180°), A1 = yaw (90/270°) |
@@ -20,8 +20,10 @@ board), the serial bridge to the servos, and the firmware.
 | Servo range | 30–150° (rest = 90°, set by hand at pretension when threading) |
 
 In simulation (hanging, gravity, real disc mass) a 60° pitch/yaw command reaches
-≈59° as a clean single arc, settles in ≈2 s, and the worst servo load is ≈16%
-of SG90 stall (`scripts/one_seg_check.py`).
+≈59° at the tip, settles in ≈3–4 s, and the worst servo load is ≈13% of SG90
+stall (`scripts/one_seg_check.py`). Gravity makes the bend collect toward the tip
+(≈2° per disc gap near the mount, ≈15° near the tip) instead of an even arc;
+without gravity it is an even 7.5° per gap.
 
 ## Setup
 
@@ -116,11 +118,9 @@ regenerable). `third_party/` is not modified.
 
 ## Caveats / placeholders
 
-- **Length:** the sim uses an 80 mm segment (8 discs at 10 mm pitch, first disc
-  one pitch from the mount). The prototype looks longer — if the real pitch is
-  20 mm, set `segment_lengths` to 0.16 in `one_segment_8disc.json` and re-run
-  `one_seg_check.py`. Free tube between the mount and first disc isn't modelled
-  yet.
+- **Length:** the sim uses a 160 mm segment (8 discs at 20 mm pitch, first disc
+  one pitch from the mount, tip disc at the tube end). Free tube between the
+  mount and the first disc, or past the last disc, isn't modelled yet.
 - **Tube stiffness** E = 2 MPa and **ID** 6.5 mm are estimates; a sideways sag
   test of the real tube with discs would calibrate E.
 - **Disc mass** is an estimate from geometry and infill (±50%); weigh one.
