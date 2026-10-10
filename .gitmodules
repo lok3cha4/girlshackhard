@@ -1,0 +1,3 @@
+[submodule "third_party/opencr-mujoco"]
+	path = third_party/opencr-mujoco
+	url = https://github.com/ContinuumRoboticsLab/opencr-mujoco

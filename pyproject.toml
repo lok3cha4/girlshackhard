@@ -1,0 +1,18 @@
+[project]
+name = "girlshackhard"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "mujoco==3.14.0",
+    "opencr-mujoco[dev]",
+    "pygame==2.6.1",
+    "pyserial==3.5",
+]
+
+[tool.uv.workspace]
+members = [
+    "third_party/opencr-mujoco",
+]
+
+[tool.uv.sources]
+opencr-mujoco = { workspace = true, editable = true }
