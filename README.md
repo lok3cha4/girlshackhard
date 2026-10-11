@@ -74,13 +74,15 @@ uv run python scripts/bend_ui_2seg.py
 robot has to be pushed and steered through (discs collide with the walls; contact
 force, progress, target distance and a timer are shown).
 
-**Any robot size** (sim only): `bend_ui_nseg.py` adds sliders for the number of
-segments (1–4) and segment length (40–200 mm, 20 mm disc pitch); changing either
-rebuilds the model in about 0.4 s. Use `--no-course` for free space.
+**Any robot size** (sim only): `bend_ui_nseg.py` adds independent sliders for the
+number of segments (1–4), segment length (40–200 mm) and discs per segment (1–16,
+kept to at least a 1 mm gap); changing any of them rebuilds the model in about
+0.4 s. The status line shows the disc pitch, gap, and the bend at which neighbouring
+disc rims would touch. Use `--no-course` for free space, `--view WxH` to resize.
 
 ```bash
 uv run python scripts/bend_ui_2seg_course.py
-uv run python scripts/bend_ui_nseg.py --segments 3 --seg-len 120
+uv run python scripts/bend_ui_nseg.py --segments 3 --seg-len 120 --discs 6
 ```
 
 **Single command from the terminal:**
