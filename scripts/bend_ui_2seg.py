@@ -106,7 +106,7 @@ class Controller:
 class SimView2:
     """2-segment model (sim_disc_design.build), driven by the virtual servo angles."""
 
-    def __init__(self, config=CONFIG):
+    def __init__(self, config=CONFIG, spec_edit=None):
         c = json.load(open(config))
         self.E = c["material_properties"]["youngs_modulus"] / 1e6
         self.L = sum(c["segment_lengths"].values())
@@ -114,7 +114,7 @@ class SimView2:
         cfg = OUT / "two_segment_8disc.json"
         json.dump(c, open(cfg, "w"), indent=2)
         xml = sw.generate(cfg, sw.HANG_EULER, OUT)
-        self.m, self.d = sd.build(xml, DISCS, LPP, True, n_segments=2)
+        self.m, self.d = sd.build(xml, DISCS, LPP, True, n_segments=2, spec_edit=spec_edit)
         self.ctrl0 = self.d.ctrl.copy()
         self.act = {}
         for a in range(self.m.nu):
@@ -172,12 +172,18 @@ class SimView2:
 
 
 class App:
+    PANEL_EXTRA_H = 0  # subclasses adding controls can make the window taller
+    HINT_Y = 400
+
+    def make_sim(self, args):
+        return SimView2(args.config)
+
     def __init__(self, args):
         pygame.init()
-        self.screen = pygame.display.set_mode((VIEW_W + ui.PANEL_W, VIEW_H + 90))
+        self.screen = pygame.display.set_mode((VIEW_W + ui.PANEL_W, VIEW_H + 90 + self.PANEL_EXTRA_H))
         pygame.display.set_caption("2-segment TDCR pitch / yaw - live sim (no board)")
         self.font = pygame.font.SysFont("menlo,monaco,courier", 14)
-        self.sim = SimView2(args.config)
+        self.sim = self.make_sim(args)
         self.segs = sb.load_layout(args.config)
         self.ctrl = Controller(self.segs, args.rate, args.limit)
         x0, w = VIEW_W + 20, ui.PANEL_W - 40
@@ -200,7 +206,7 @@ class App:
             return
         if self.closing:
             return
-        for s in self.sliders + [self.stiff]:
+        for s in self.widgets():
             s.handle(e)
         if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and self.btn_center.collidepoint(e.pos):
             self.center()
@@ -221,6 +227,10 @@ class App:
             elif e.key == pygame.K_g:
                 g = self.sim.m.opt.gravity
                 g[:] = 0 if g.any() else self.g0
+
+    def widgets(self):
+        """All sliders that take mouse input and get drawn."""
+        return self.sliders + [self.stiff]
 
     def center(self):
         for s in self.sliders:
@@ -243,23 +253,30 @@ class App:
         scr = self.screen
         scr.fill(ui.BG)
         scr.blit(pygame.image.frombuffer(rgb, (VIEW_W, VIEW_H), "RGB"), (0, 0))
-        for s in self.sliders + [self.stiff]:
+        for s in self.widgets():
             s.draw(scr, self.font)
         pygame.draw.rect(scr, (60, 62, 70), self.btn_center, border_radius=4)
         scr.blit(self.font.render("Center", True, ui.FG), (self.btn_center.x + 12, self.btn_center.y + 5))
-        hint = ["arrows: seg 1   W/S/A/D: seg 2", "shift: 5 deg   space: center", "[ / ]: stiffness -/+ 0.1 MPa",
+        hint = self.hints()
+        for i, t in enumerate(hint):
+            scr.blit(self.font.render(t, True, ui.DIM), (VIEW_W + 20, self.HINT_Y + i * 20))
+        for i, (t, c) in enumerate(self.status_lines()):
+            scr.blit(self.font.render(t, True, c), (10, VIEW_H + 6 + i * 20))
+        pygame.display.flip()
+
+    def hints(self):
+        return ["arrows: seg 1   W/S/A/D: seg 2", "shift: 5 deg   space: center", "[ / ]: stiffness -/+ 0.1 MPa",
                 "G: gravity " + ("ON" if self.sim.m.opt.gravity.any() else "OFF (CC check)"),
                 "sim only - nothing is sent"]
-        for i, t in enumerate(hint):
-            scr.blit(self.font.render(t, True, ui.DIM), (VIEW_W + 20, 400 + i * 20))
 
+    def status_lines(self):
         b = self.ctrl.bends()
         s1t, s1p = self.sim.seg1_bend()
         tt, tp = self.sim.tip_bend()
         err = np.linalg.norm(self.sim.tip_pos() - cc_tip(self.segs, b)) * 1000
         fmt_dir = lambda t, p: f"{t:5.1f} @ " + (f"{p:+6.1f}" if t > 0.5 else "   -- ")
         a = self.ctrl.angles
-        lines = [
+        return [
             (f"cmd seg1 {math.degrees(b[0][0]):5.1f} @ {math.degrees(b[0][1]):+6.1f}   seg2 {math.degrees(b[1][0]):5.1f} @ "
              f"{math.degrees(b[1][1]):+6.1f}   (E {self.sim.E:g} MPa)", ui.FG),
             (f"sim  seg1 end {fmt_dir(s1t, s1p)}   tip {fmt_dir(tt, tp)}   tip vs CC {err:5.1f} mm", ui.FG),
@@ -268,9 +285,6 @@ class App:
              ui.WARN if self.ctrl.clamped else ui.FG),
             ("closing: ramping to straight..." if self.closing else "", ui.DIM),
         ]
-        for i, (t, c) in enumerate(lines):
-            scr.blit(self.font.render(t, True, c), (10, VIEW_H + 6 + i * 20))
-        pygame.display.flip()
 
     def run(self):
         clock = pygame.time.Clock()

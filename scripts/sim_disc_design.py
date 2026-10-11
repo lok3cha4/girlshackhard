@@ -57,8 +57,11 @@ def make_config(discs, pitch_mm, links_per_pitch, youngs_mpa=None):
     return path, L
 
 
-def build(xml, discs, links_per_pitch, with_discs=True, n_segments=2):
-    """Compile the generated scene with discs added and tendons re-routed."""
+def build(xml, discs, links_per_pitch, with_discs=True, n_segments=2, spec_edit=None):
+    """Compile the generated scene with discs added and tendons re-routed.
+
+    spec_edit: optional callable(spec) applied just before compiling.
+    """
     spec = mujoco.MjSpec.from_file(str(xml))
     ro, ri, h = sw.DISC_OD / 2000, sw.BB_HOLE / 2000, sw.DISC_T / 1000
     disc_links = [j * links_per_pitch for j in range(1, n_segments * discs + 1)]
@@ -90,6 +93,8 @@ def build(xml, discs, links_per_pitch, with_discs=True, n_segments=2):
         for site in keep:
             new.wrap_site(site)
 
+    if spec_edit is not None:
+        spec_edit(spec)
     m = spec.compile()
     d = mujoco.MjData(m)
     mujoco.mj_resetDataKeyframe(m, d, m.key("pretension").id)
