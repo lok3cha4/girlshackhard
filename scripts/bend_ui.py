@@ -23,7 +23,13 @@ the UI; open/write failures are shown and fall back to "No board".
     uv run python scripts/bend_ui.py                      # sim only
     uv run python scripts/bend_ui.py --port /dev/cu.usbmodemXXXX
     uv run python scripts/bend_ui.py --no-serial          # sim only + echo lines
-Keys: arrows nudge 1 deg (shift: 5), space = center, Esc = close.
+A third slider sets the backbone Young's modulus E live (0.5-10 MPa). Joint
+stiffness from the generator's material mode is proportional to E (checked:
+regenerating at another E scales all joint stiffnesses by exactly E/E0 and
+changes nothing else), so the slider rescales it without rebuilding the model.
+
+Keys: arrows nudge 1 deg (shift: 5), [ / ] = stiffness -/+ 0.1 MPa,
+space = center (bends only), Esc = close.
 """
 
 import argparse
@@ -101,6 +107,12 @@ class SimView:
         self.cam.lookat[:] = o + np.array([0.0, 0.0, -self.L * 0.6])
         self.cam.distance, self.cam.azimuth, self.cam.elevation = 3.6 * self.L, 135, -12
         self.E = E
+        self.E0, self.stiff0 = E, self.m.jnt_stiffness.copy()
+
+    def set_E(self, E_mpa):
+        """Backbone Young's modulus (MPa): joint stiffness scales linearly with E."""
+        self.E = E_mpa
+        self.m.jnt_stiffness[:] = self.stiff0 * (E_mpa / self.E0)
 
     def apply(self, angles):
         """Tendon ctrl = what the spools do at these (sent) servo angles."""
@@ -129,16 +141,18 @@ class SimView:
 
 
 class Slider:
-    def __init__(self, label, rect, lo, hi):
+    def __init__(self, label, rect, lo, hi, unit="deg", step=0.5, fmt="{:+6.1f}"):
         self.label, self.rect, self.lo, self.hi = label, pygame.Rect(rect), lo, hi
+        self.unit, self.step, self.fmt = unit, step, fmt
         self.value, self.drag = 0.0, False
 
     def set_from_x(self, x):
         f = min(1.0, max(0.0, (x - self.rect.x) / self.rect.w))
-        self.value = round((self.lo + f * (self.hi - self.lo)) * 2) / 2
+        self.value = round(round((self.lo + f * (self.hi - self.lo)) / self.step) * self.step, 6)
 
     def handle(self, e):
-        if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and self.rect.inflate(0, 16).collidepoint(e.pos):
+        # inflated so the whole knob (radius 9) is grabbable, even at either end
+        if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and self.rect.inflate(22, 16).collidepoint(e.pos):
             self.drag = True
             self.set_from_x(e.pos[0])
         elif e.type == pygame.MOUSEBUTTONUP and e.button == 1:
@@ -147,10 +161,12 @@ class Slider:
             self.set_from_x(e.pos[0])
 
     def draw(self, surf, font):
-        surf.blit(font.render(f"{self.label} {self.value:+6.1f} deg", True, FG), (self.rect.x, self.rect.y - 22))
+        text = f"{self.label} {self.fmt.format(self.value)} {self.unit}"
+        surf.blit(font.render(text, True, FG), (self.rect.x, self.rect.y - 22))
         pygame.draw.rect(surf, (60, 62, 70), self.rect, border_radius=4)
-        cx = self.rect.x + (0 - self.lo) / (self.hi - self.lo) * self.rect.w
-        pygame.draw.line(surf, DIM, (cx, self.rect.y - 3), (cx, self.rect.bottom + 3))
+        if self.lo < 0 < self.hi:  # zero tick
+            cx = self.rect.x + (0 - self.lo) / (self.hi - self.lo) * self.rect.w
+            pygame.draw.line(surf, DIM, (cx, self.rect.y - 3), (cx, self.rect.bottom + 3))
         kx = self.rect.x + (self.value - self.lo) / (self.hi - self.lo) * self.rect.w
         pygame.draw.circle(surf, ACCENT, (int(kx), self.rect.centery), 9)
 
@@ -167,9 +183,14 @@ class App:
         x0 = VIEW_W + 20
         self.sliders = [Slider("Pitch", (x0, 50, PANEL_W - 40, 10), -args.limit, args.limit),
                         Slider("Yaw  ", (x0, 110, PANEL_W - 40, 10), -args.limit, args.limit)]
-        self.btn_center = pygame.Rect(x0, 140, 90, 26)
-        self.btn_refresh = pygame.Rect(x0 + 100, 140, 90, 26)
-        self.port_y0 = 200
+        self.stiff = Slider("Stiffness E", (x0, 170, PANEL_W - 40, 10), args.e_min, args.e_max,
+                            unit="MPa", step=0.1, fmt="{:5.1f}")
+        if args.youngs_mpa is not None:
+            self.sim.set_E(args.youngs_mpa)
+        self.stiff.value = round(self.sim.E, 1)
+        self.btn_center = pygame.Rect(x0, 200, 90, 26)
+        self.btn_refresh = pygame.Rect(x0 + 100, 200, 90, 26)
+        self.port_y0 = 250
         self.echo = args.no_serial
         self.config, self.discs = args.config, args.discs
         self.bridge = None  # open ServoBridge, or None = sim only
@@ -263,7 +284,7 @@ class App:
             return
         if self.closing:
             return
-        for s in self.sliders:
+        for s in self.sliders + [self.stiff]:
             s.handle(e)
         if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
             if self.btn_center.collidepoint(e.pos):
@@ -283,6 +304,9 @@ class App:
                 s.value = max(s.lo, min(s.hi, s.value + dv))
             elif e.key == pygame.K_SPACE:
                 self.center()
+            elif e.key in (pygame.K_LEFTBRACKET, pygame.K_RIGHTBRACKET):
+                dv = 0.1 if e.key == pygame.K_RIGHTBRACKET else -0.1
+                self.stiff.value = round(max(self.stiff.lo, min(self.stiff.hi, self.stiff.value + dv)), 1)
 
     def center(self):
         for s in self.sliders:
@@ -300,6 +324,8 @@ class App:
     def frame(self, dt):
         """One tick. Returns False once the close ramp has finished."""
         self._poll_opening()
+        if abs(self.stiff.value - self.sim.E) > 1e-9:
+            self.sim.set_E(self.stiff.value)
         self.ctrl.set_target(self.sliders[0].value, self.sliders[1].value)
         self.ctrl.tick(dt)
         self._send_if_changed()
@@ -316,7 +342,7 @@ class App:
         scr = self.screen
         scr.fill(BG)
         scr.blit(pygame.image.frombuffer(rgb, (VIEW_W, VIEW_H), "RGB"), (0, 0))
-        for s in self.sliders:
+        for s in self.sliders + [self.stiff]:
             s.draw(scr, self.font)
         for r, t in ((self.btn_center, "Center"), (self.btn_refresh, "Refresh")):
             pygame.draw.rect(scr, (60, 62, 70), r, border_radius=4)
@@ -377,6 +403,9 @@ def main():
     p.add_argument("--discs", type=int, default=sb.DEFAULT_DISCS)
     p.add_argument("--rate", type=float, default=90.0, help="max command slew (deg/s)")
     p.add_argument("--limit", type=float, default=60.0, help="slider range +/- deg")
+    p.add_argument("--youngs-mpa", type=float, help="starting backbone E (default: from config)")
+    p.add_argument("--e-min", type=float, default=0.5, help="stiffness slider min (MPa)")
+    p.add_argument("--e-max", type=float, default=10.0, help="stiffness slider max (MPa)")
     App(p.parse_args()).run()
 
 

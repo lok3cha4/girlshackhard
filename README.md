@@ -54,7 +54,17 @@ uv run python scripts/bend_ui.py --port /dev/cu.X  # pre-select a board
   to disconnect. Press **Refresh** after plugging a board in.
 - Commands are slew-limited (90°/s, `--rate`) and a line is only sent when a
   servo angle changes. Closing the window ramps back to straight first.
-- Keys: arrows nudge 1° (Shift: 5°), Space centers, Esc closes.
+- **Stiffness slider:** sets the tube's Young's modulus live (0.5–10 MPa) to see
+  how a stiffer or softer backbone changes the predicted shape (`[` / `]` = ∓0.1 MPa).
+- Keys: arrows nudge 1° (Shift: 5°), Space centers the bend, Esc closes.
+
+**2-segment sim** (sim only, no serial): 2 × 8 discs, 2 × 160 mm, four
+pitch/yaw sliders plus the stiffness slider; G toggles gravity to compare with
+the ideal constant-curvature shape.
+
+```bash
+uv run python scripts/bend_ui_2seg.py
+```
 
 **Single command from the terminal:**
 
@@ -97,7 +107,8 @@ uv run python scripts/one_seg_check.py   # 60° / diagonal bend, shape, settling
 
 ```
 scripts/
-  bend_ui.py          live pygame UI (sliders, predicted shape, port picker)
+  bend_ui.py          live pygame UI (sliders, stiffness, predicted shape, port picker)
+  bend_ui_2seg.py     sim-only 2-segment version (4 bend sliders, stiffness, gravity toggle)
   serial_bridge.py    bend -> 2 servo angles, serial protocol, ServoBridge
                       (R_SPOOL, SAFE_MIN/MAX, SERVO_MAP live here — single copy)
   one_seg_check.py    current design: bend, shape, settling, SG90 load
@@ -108,6 +119,7 @@ scripts/
   render_bend.py      early single-segment render helper
 configs/generation/
   one_segment_8disc.json      current hardware layout
+  two_segment_8disc.json      2-segment sim layout (mounted at 0.5 m to clear the floor)
   single_segment_4tendon.json base material/mount config (tube, E = 2 MPa)
 FIRMWARE/firmware.cpp
 third_party/opencr-mujoco     simulator (submodule, pinned)
