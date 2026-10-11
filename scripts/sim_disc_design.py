@@ -72,8 +72,10 @@ def build(xml, discs, links_per_pitch, with_discs=True, n_segments=2, spec_edit=
         # link, the midpoint of every full link (same place as the tendon site)
         pos = ft[3:] if k == disc_links[-1] else (ft[:3] + ft[3:]) / 2
         if with_discs:
-            # proximal discs also carry the distal segment's tendons (8 holes)
-            mass = sw.disc_estimate(8 if j <= discs * (n_segments - 1) else 4)[0] / 1000
+            # a disc in segment s also carries every more-distal segment's
+            # tendons: 4 holes per segment from s to the tip (2 seg: 8 then 4)
+            seg_idx = (j - 1) // discs
+            mass = sw.disc_estimate(4 * (n_segments - seg_idx))[0] / 1000
             i_ax = mass / 2 * (ro**2 + ri**2)
             i_tr = mass / 12 * (3 * (ro**2 + ri**2) + h**2)
             disc = link.add_body(name=f"disc_{j}", pos=pos, explicitinertial=True,

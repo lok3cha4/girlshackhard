@@ -69,6 +69,20 @@ the ideal constant-curvature shape.
 uv run python scripts/bend_ui_2seg.py
 ```
 
+**Z insertion + obstacle course** (sim only): `bend_ui_2seg_z.py` adds a Z slider
+(advance / retract); `bend_ui_2seg_course.py` adds a winding vessel-like tube the
+robot has to be pushed and steered through (discs collide with the walls; contact
+force, progress, target distance and a timer are shown).
+
+**Any robot size** (sim only): `bend_ui_nseg.py` adds sliders for the number of
+segments (1–4) and segment length (40–200 mm, 20 mm disc pitch); changing either
+rebuilds the model in about 0.4 s. Use `--no-course` for free space.
+
+```bash
+uv run python scripts/bend_ui_2seg_course.py
+uv run python scripts/bend_ui_nseg.py --segments 3 --seg-len 120
+```
+
 **Single command from the terminal:**
 
 ```bash
@@ -112,6 +126,9 @@ uv run python scripts/one_seg_check.py   # 60° / diagonal bend, shape, settling
 scripts/
   bend_ui.py          live pygame UI (sliders, stiffness, predicted shape, port picker)
   bend_ui_2seg.py     sim-only 2-segment version (4 bend sliders, stiffness, gravity toggle)
+  bend_ui_2seg_z.py   + Z (insertion) slider
+  bend_ui_2seg_course.py  + anatomy-like obstacle course with contact feedback
+  bend_ui_nseg.py     course sim with segment-count and segment-length sliders
   serial_bridge.py    bend -> 2 servo angles, serial protocol, ServoBridge
                       (R_SPOOL, SAFE_MIN/MAX, SERVO_MAP live here — single copy)
   one_seg_check.py    current design: bend, shape, settling, SG90 load
