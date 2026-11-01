@@ -124,17 +124,24 @@ uv run python scripts/one_seg_check.py   # 60° / diagonal bend, shape, settling
 
 ## Repo layout
 
+Every script in `scripts/` is run from the repo root as
+`uv run python scripts/<name>.py` (add `--help` for its options).
+
 ```
 scripts/
-  bend_ui.py          live pygame UI (sliders, stiffness, predicted shape, port picker)
+  # interactive UIs (pygame window)
+  bend_ui.py          live UI for the real robot (sliders, stiffness, predicted shape, port picker)
   bend_ui_2seg.py     sim-only 2-segment version (4 bend sliders, stiffness, gravity toggle)
   bend_ui_2seg_z.py   + Z (insertion) slider
   bend_ui_2seg_course.py  + anatomy-like obstacle course with contact feedback
-  bend_ui_nseg.py     course sim with segment-count and segment-length sliders
-  serial_bridge.py    bend -> 2 servo angles, serial protocol, ServoBridge
+  bend_ui_nseg.py     course sim with segment-count, segment-length and discs-per-segment sliders
+
+  # command line / checks (print results, write to outputs/)
+  serial_bridge.py    send one bend command (--theta/--phi); also the ServoBridge module
                       (R_SPOOL, SAFE_MIN/MAX, SERVO_MAP live here — single copy)
   one_seg_check.py    current design: bend, shape, settling, SG90 load
-  sim_disc_design.py  builds the MuJoCo model: disc mass + disc-hole tendon routing
+  sim_disc_design.py  builds the MuJoCo model (disc mass + disc-hole tendon routing);
+                      run directly for a bend check and video
   bend60_check.py     2-segment 60° check (earlier design studies)
   spool_sizing.py     2-segment spool sizing (earlier design studies)
   sweep_2seg.py       2-segment disc/length sweep + shared sim helpers
